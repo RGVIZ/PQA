@@ -1,507 +1,744 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Home, 
-  ClipboardCheck, 
-  FilePlus, 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
-  Mic, 
-  Upload, 
-  Eye, 
-  RotateCcw,
-  Check,
-  X,
-  Search,
-  Filter,
-  Menu,
-  MapPin,
-  User,
-  Clock,
-  ArrowRight,
-  Info,
-  MoreHorizontal,
-  LayoutGrid,
-  Settings,
-  Bell
-} from 'lucide-react';
+import 'package:flutter/material.dart';
 
-// --- Types & Constants ---
-const VIEW = {
-  HOME: 'HOME',
-  ACCEPTANCE: 'ACCEPTANCE',
-  REQUEST: 'REQUEST',
-  EVALUATION: 'EVALUATION',
-  NOTIFICATIONS: 'NOTIFICATIONS'
-};
+/// MAIN ENTRY POINT
+/// This application is structured for a mobile-first enterprise audit experience.
+/// Developers can use this as a UI/UX reference for the final product.
+void main() {
+  runApp(const AuditManagerApp());
+}
 
-const INITIAL_AUDITS = [
-  { id: 'AUD-001', type: 'Quality Audit', plant: 'Plant A', date: 'Oct 25, 2023', status: 'Pending Approval', auditor: 'John Doe', priority: 'High' },
-  { id: 'AUD-002', type: 'Safety Audit', plant: 'Plant B', date: 'Oct 28, 2023', status: 'Scheduled', auditor: 'Jane Smith', priority: 'Medium' },
-  { id: 'AUD-003', type: 'Environmental', plant: 'Plant A', date: 'Nov 02, 2023', status: 'Requested', auditor: 'Mike Ross', priority: 'Low' },
-  { id: 'AUD-004', type: 'Process Audit', plant: 'Plant C', date: 'Nov 05, 2023', status: 'Pending Approval', auditor: 'Sarah Connor', priority: 'High' },
-];
+class AuditManagerApp extends StatelessWidget {
+  const AuditManagerApp({super.key});
 
-const EVALUATION_DATA = [
-  {
-    id: '1.1',
-    criteria: 'Operator Skill',
-    checkPoint: 'Skill Level of Operator - Check certifications and on-site performance.',
-    maxScore: 4,
-    score: '',
-    actual: '',
-    observation: '',
-    disposition: '',
-    actionType: '',
-    applicable: true
-  },
-  {
-    id: '2.1',
-    criteria: 'Operator Training',
-    checkPoint: 'Operator Training Needs vs. Records - Verify that training logs match current assignments.',
-    maxScore: 4,
-    score: '',
-    actual: '',
-    observation: '',
-    disposition: '',
-    actionType: '',
-    applicable: true
-  },
-  {
-    id: '3.1',
-    criteria: 'Customer Issues',
-    checkPoint: 'Customer Issues Resolution - Review the last 3 months of feedback logs.',
-    maxScore: 4,
-    score: '',
-    actual: '',
-    observation: '',
-    disposition: '',
-    actionType: '',
-    applicable: true
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Audit Manager',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        // Using Seed color to generate a consistent Slate/Blue enterprise palette
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB),
+          primary: const Color(0xFF2563EB),
+          secondary: const Color(0xFF64748B),
+          surface: const Color(0xFFF8FAFC),
+          background: const Color(0xFFF8FAFC),
+        ),
+        fontFamily: 'Inter', // Assuming Inter font is available or fallback to system sans-serif
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: Color(0xFF0F172A),
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+          iconTheme: IconThemeData(color: Color(0xFF64748B)),
+        ),
+      ),
+      home: const MainNavigationScreen(),
+    );
   }
+}
+
+// --- MODELS ---
+// These classes represent the data structures expected from the backend.
+
+class Audit {
+  final String id;
+  final String type;
+  final String plant;
+  final String date;
+  final String status;
+  final String auditor;
+  final String priority;
+
+  Audit({
+    required this.id,
+    required this.type,
+    required this.plant,
+    required this.date,
+    required this.status,
+    required this.auditor,
+    this.priority = 'Medium',
+  });
+}
+
+class EvaluationItem {
+  final String id;
+  final String criteria;
+  final String checkPoint;
+  final int maxScore;
+  int? score;
+  String observation;
+  bool applicable;
+
+  EvaluationItem({
+    required this.id,
+    required this.criteria,
+    required this.checkPoint,
+    required this.maxScore,
+    this.score,
+    this.observation = '',
+    this.applicable = true,
+  });
+}
+
+// --- MOCK DATA ---
+final List<Audit> initialAudits = [
+  Audit(id: 'AUD-001', type: 'Quality Audit', plant: 'Plant A', date: 'Oct 25, 2023', status: 'Pending Approval', auditor: 'John Doe', priority: 'High'),
+  Audit(id: 'AUD-002', type: 'Safety Audit', plant: 'Plant B', date: 'Oct 28, 2023', status: 'Scheduled', auditor: 'Jane Smith'),
+  Audit(id: 'AUD-003', type: 'Environmental', plant: 'Plant A', date: 'Nov 02, 2023', status: 'Requested', auditor: 'Mike Ross'),
+  Audit(id: 'AUD-004', type: 'Process Audit', plant: 'Plant C', date: 'Nov 05, 2023', status: 'Pending Approval', auditor: 'Sarah Connor', priority: 'High'),
 ];
 
-// --- Sub-Components ---
+// --- NAVIGATION CONTROLLER ---
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
 
-const Header = ({ title, onBack, currentView }) => (
-  <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-50">
-    <div className="flex items-center gap-2">
-      {onBack ? (
-        <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full active:scale-90 transition-all">
-          <ChevronLeft className="w-6 h-6 text-gray-700" />
-        </button>
-      ) : (
-        <div className="p-2 -ml-2">
-          <LayoutGrid className="w-6 h-6 text-blue-600" />
-        </div>
-      )}
-      <h1 className="text-xl font-bold text-gray-900 tracking-tight">{title}</h1>
-    </div>
-    <div className="flex items-center gap-1">
-      <button className="p-2 text-gray-500 hover:text-blue-600 relative">
-        <Bell className="w-5 h-5" />
-        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-      </button>
-      <div className="w-8 h-8 ml-1 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm">
-        JD
-      </div>
-    </div>
-  </header>
-);
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
 
-const NavItem = ({ icon: Icon, label, active, onClick }) => (
-  <button 
-    onClick={onClick}
-    className={`flex flex-col items-center gap-1 flex-1 py-2 transition-all ${active ? 'text-blue-600' : 'text-gray-400'}`}
-  >
-    <Icon className={`w-6 h-6 ${active ? 'fill-blue-600/10' : ''}`} />
-    <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
-  </button>
-);
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  int _currentIndex = 0;
 
-const StatusBadge = ({ status }) => {
-  const styles = {
-    'Pending Approval': 'bg-orange-50 text-orange-600 border-orange-100',
-    'Scheduled': 'bg-blue-50 text-blue-600 border-blue-100',
-    'Requested': 'bg-purple-50 text-purple-600 border-purple-100',
-    'High': 'bg-red-50 text-red-600 border-red-100',
-  };
-  return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}>
-      {status}
-    </span>
-  );
-};
+  // Screens indexed to match bottom navigation
+  late final List<Widget> _screens;
 
-// --- Main Views ---
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeScreen(onActionTap: (index) => setState(() => _currentIndex = index)),
+      const AuditListingScreen(statusFilter: 'Pending Approval'),
+      const AuditListingScreen(statusFilter: 'All'),
+      const Center(child: Text('User Profile & System Settings')),
+    ];
+  }
 
-const HomeScreen = ({ setView }) => (
-  <div className="p-5 space-y-6">
-    <section>
-      <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Actions</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <button 
-          onClick={() => setView(VIEW.ACCEPTANCE)}
-          className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-start gap-4 active:scale-95 transition-all"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
-            <ClipboardCheck className="w-6 h-6 text-blue-600" />
-          </div>
-          <div className="text-left">
-            <p className="font-bold text-gray-900">Accept Plans</p>
-            <p className="text-xs text-gray-500 mt-1">4 Pending</p>
-          </div>
-        </button>
-        <button 
-          onClick={() => setView(VIEW.REQUEST)}
-          className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-start gap-4 active:scale-95 transition-all"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-            <FilePlus className="w-6 h-6 text-emerald-600" />
-          </div>
-          <div className="text-left">
-            <p className="font-bold text-gray-900">New Request</p>
-            <p className="text-xs text-gray-500 mt-1">Global Plants</p>
-          </div>
-        </button>
-      </div>
-    </section>
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+        ),
+        child: NavigationBar(
+          height: 70,
+          elevation: 0,
+          backgroundColor: Colors.white,
+          selectedIndex: _currentIndex,
+          indicatorColor: const Color(0xFF2563EB).withOpacity(0.08),
+          onDestinationSelected: (index) => setState(() => _currentIndex = index),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard, color: Color(0xFF2563EB)), label: 'Home'),
+            NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check, color: Color(0xFF2563EB)), label: 'Review'),
+            NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history, color: Color(0xFF2563EB)), label: 'Logs'),
+            NavigationDestination(icon: Icon(Icons.account_circle_outlined), selectedIcon: Icon(Icons.account_circle, color: Color(0xFF2563EB)), label: 'Account'),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-    <section>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Recent Audits</h2>
-        <button className="text-blue-600 text-xs font-bold">See All</button>
-      </div>
-      <div className="space-y-3">
-        {INITIAL_AUDITS.slice(0, 3).map(audit => (
-          <div key={audit.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${audit.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-              {audit.plant.slice(-1)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-gray-900 truncate">{audit.type}</h4>
-              <p className="text-xs text-gray-500 truncate">{audit.date} • {audit.auditor}</p>
-            </div>
-            <StatusBadge status={audit.status} />
-          </div>
-        ))}
-      </div>
-    </section>
+// --- HOME SCREEN ---
+class HomeScreen extends StatelessWidget {
+  final Function(int) onActionTap;
+  const HomeScreen({super.key, required this.onActionTap});
 
-    <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-6 text-white shadow-lg shadow-blue-200">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <p className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-1">Your Performance</p>
-          <h3 className="text-2xl font-bold italic">Audit Score 94%</h3>
-        </div>
-        <div className="p-2 bg-white/20 rounded-xl">
-          <Info className="w-5 h-5 text-white" />
-        </div>
-      </div>
-      <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
-        <div className="bg-white h-full w-[94%] rounded-full"></div>
-      </div>
-      <p className="text-[10px] text-blue-100 mt-3 font-medium">Top 5% of auditors this quarter</p>
-    </div>
-  </div>
-);
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Audit Dashboard'),
+        actions: [
+          Stack(
+            children: [
+              IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_outlined)),
+              Positioned(right: 12, top: 12, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle))),
+            ],
+          ),
+          const SizedBox(width: 8),
+          const Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Color(0xFFE2E8F0),
+              child: Text('JD', style: TextStyle(color: Color(0xFF1E293B), fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
+          )
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(title: 'QUICK ACTIONS'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionCard(
+                    title: 'Pending Review',
+                    subtitle: '4 Plans Waiting',
+                    icon: Icons.approval_rounded,
+                    color: const Color(0xFF2563EB),
+                    onTap: () => onActionTap(1),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _ActionCard(
+                    title: 'New Request',
+                    subtitle: 'Global Plants',
+                    icon: Icons.add_moderator_outlined,
+                    color: const Color(0xFF10B981),
+                    onTap: () => onActionTap(2),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.between,
+              children: [
+                const _SectionHeader(title: 'RECENT ACTIVITY'),
+                TextButton(onPressed: () => onActionTap(2), child: const Text('View Logs', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...initialAudits.take(3).map((audit) => _AuditListItem(audit: audit)),
+            const SizedBox(height: 24),
+            const _PerformanceWidget(),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-const AuditListing = ({ type, onAuditSelect }) => {
-  const [search, setSearch] = useState('');
-  const audits = INITIAL_AUDITS.filter(a => 
-    type === VIEW.ACCEPTANCE ? a.status === 'Pending Approval' : true
-  );
+// --- UI COMPONENTS ---
 
-  return (
-    <div className="p-4 space-y-4">
-      <div className="relative group">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-600 transition-colors" />
-        <input 
-          type="text" 
-          placeholder="Search by Audit ID, Plant..." 
-          className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-gray-50 rounded-xl">
-          <Filter className="w-4 h-4 text-gray-500" />
-        </button>
-      </div>
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader({required this.title});
 
-      <div className="space-y-4">
-        {audits.map((audit) => (
-          <div 
-            key={audit.id} 
-            onClick={() => onAuditSelect(audit)}
-            className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm active:scale-[0.98] transition-all cursor-pointer"
-          >
-            <div className="p-5">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center">
-                    <ClipboardCheck className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black text-blue-600 tracking-tighter uppercase">{audit.id}</span>
-                    <h3 className="text-base font-bold text-gray-900 leading-tight">{audit.type}</h3>
-                  </div>
-                </div>
-                <StatusBadge status={audit.status} />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-5">
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                  <MapPin className="w-4 h-4" /> {audit.plant}
-                </div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                  <Clock className="w-4 h-4" /> {audit.date}
-                </div>
-              </div>
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF94A3B8),
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+}
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <User className="w-3.5 h-3.5" /> <span className="font-medium">{audit.auditor}</span>
-                </div>
-                {type === VIEW.ACCEPTANCE ? (
-                  <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                      <Check className="w-3.5 h-3.5" /> Approve
-                    </button>
-                    <button className="p-2 bg-rose-50 text-rose-600 rounded-xl" onClick={e => e.stopPropagation()}>
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-blue-600 text-xs font-bold flex items-center gap-1">
-                    Details <ChevronRight className="w-4 h-4" />
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+class _ActionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
 
-const EvaluationSheet = ({ audit }) => {
-  const [data, setData] = useState(EVALUATION_DATA);
-  const [activeTab, setActiveTab] = useState('sheet');
+  const _ActionCard({required this.title, required this.subtitle, required this.icon, required this.color, required this.onTap});
 
-  const updateRow = (id, field, value) => {
-    setData(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
-  };
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(height: 16),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+              const SizedBox(height: 2),
+              Text(subtitle, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-  return (
-    <div className="pb-32 bg-gray-50 min-h-screen">
-      <div className="bg-white border-b px-4 flex sticky top-[64px] z-40">
-        <button 
-          className={`flex-1 py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'sheet' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400'}`}
-          onClick={() => setActiveTab('sheet')}
-        >
-          Checklist
-        </button>
-        <button 
-          className={`flex-1 py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'findings' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400'}`}
-          onClick={() => setActiveTab('findings')}
-        >
-          Findings
-        </button>
-      </div>
+class _AuditListItem extends StatelessWidget {
+  final Audit audit;
+  const _AuditListItem({required this.audit});
 
-      <div className="p-4 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Menu className="w-4 h-4 text-gray-400" />
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section: Manpower</span>
-          </div>
-          <button className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Change Section</button>
-        </div>
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: audit.priority == 'High' ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF),
+            child: Text(
+              audit.plant.characters.last, 
+              style: TextStyle(
+                color: audit.priority == 'High' ? const Color(0xFFEF4444) : const Color(0xFF3B82F6), 
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              )
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(audit.type, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+                const SizedBox(height: 2),
+                Text('${audit.date} • ${audit.auditor}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
+          _StatusBadge(status: audit.status),
+        ],
+      ),
+    );
+  }
+}
 
-        {data.map((row) => (
-          <div key={row.id} className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden transition-all ${!row.applicable ? 'opacity-50 grayscale' : ''}`}>
-            {/* Header */}
-            <div className="p-5 flex justify-between items-center bg-gray-50/50">
-              <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">{row.id}</span>
-                <h4 className="font-bold text-gray-900">{row.criteria}</h4>
-              </div>
-              <div className="flex gap-1.5">
-                <button 
-                  onClick={() => updateRow(row.id, 'applicable', !row.applicable)}
-                  className={`p-2 rounded-xl border transition-all ${row.applicable ? 'bg-white border-gray-200 text-gray-400' : 'bg-blue-600 border-blue-600 text-white'}`}
-                >
-                  {row.applicable ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+class _PerformanceWidget extends StatelessWidget {
+  const _PerformanceWidget();
 
-            {/* Body */}
-            <div className="p-6 space-y-5">
-              <div>
-                <p className="text-xs text-gray-500 leading-relaxed font-medium">{row.checkPoint}</p>
-              </div>
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+        ),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.between,
+            children: [
+              const Text('EFFICIENCY SCORE', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              Icon(Icons.stars_rounded, color: Colors.orange.shade300, size: 20),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text('94% Rating', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: const LinearProgressIndicator(
+              value: 0.94,
+              backgroundColor: Colors.white10,
+              color: Colors.white,
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Ranked #1 in Plant A for October', style: TextStyle(color: Colors.white60, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Score (0-4)</label>
-                  <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <button className="p-3 bg-gray-50 text-gray-400"><RotateCcw className="w-4 h-4" /></button>
-                    <select 
-                      disabled={!row.applicable}
-                      className="flex-1 py-3 px-2 bg-transparent outline-none font-bold text-sm text-center appearance-none"
-                    >
-                      <option value="">-</option>
-                      {[0,1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Target vs Act</label>
-                  <input 
-                    disabled={!row.applicable}
-                    type="text" 
-                    placeholder="Enter val" 
-                    className="w-full py-3 px-4 bg-white border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                  />
-                </div>
-              </div>
+// --- AUDIT LISTING SCREEN ---
+class AuditListingScreen extends StatelessWidget {
+  final String statusFilter;
+  const AuditListingScreen({super.key, required this.statusFilter});
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Observations</label>
-                <div className="relative group">
-                  <textarea 
-                    disabled={!row.applicable}
-                    placeholder="Capture live findings..." 
-                    className="w-full p-4 bg-white border border-gray-200 rounded-2xl text-sm min-h-[100px] outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                  ></textarea>
-                  <button className="absolute right-4 bottom-4 w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center active:scale-90 transition-all">
-                    <Mic className="w-5 h-5 text-blue-600" />
-                  </button>
-                </div>
-              </div>
+  @override
+  Widget build(BuildContext context) {
+    final filteredAudits = statusFilter == 'All' 
+        ? initialAudits 
+        : initialAudits.where((a) => a.status == statusFilter).toList();
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Evidence</span>
-                <div className="flex gap-2">
-                  <button className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-gray-500 active:bg-blue-50 active:text-blue-600 transition-all">
-                    <Upload className="w-4 h-4" />
-                  </button>
-                  <button className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-gray-500 active:bg-blue-50 active:text-blue-600 transition-all">
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+    return Scaffold(
+      appBar: AppBar(title: Text(statusFilter == 'All' ? 'Audit Logs' : 'Pending Approvals')),
+      body: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        itemCount: filteredAudits.length,
+        itemBuilder: (context, index) {
+          final audit = filteredAudits[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: InkWell(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EvaluationScreen(audit: audit))),
+              borderRadius: BorderRadius.circular(24),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.between,
+                      children: [
+                        Text(audit.id, style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5)),
+                        _StatusBadge(status: audit.status),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(audit.type, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _IconText(icon: Icons.location_on_outlined, text: audit.plant),
+                        const SizedBox(width: 20),
+                        _IconText(icon: Icons.calendar_month_outlined, text: audit.date),
+                      ],
+                    ),
+                    const Divider(height: 32, color: Color(0xFFF1F5F9)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _IconText(icon: Icons.person_search_outlined, text: audit.auditor),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 
-      {/* Floating Footer Actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-3 z-50">
-        <button className="flex-1 py-4 px-6 bg-white border border-gray-200 rounded-2xl font-bold text-gray-600 text-sm shadow-sm active:scale-95 transition-all">
-          Draft
-        </button>
-        <button className="flex-[2] py-4 px-6 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 flex items-center justify-center gap-2 active:scale-95 transition-all">
-          Complete Audit <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-};
+// --- EVALUATION / CHECKLIST SCREEN ---
+class EvaluationScreen extends StatefulWidget {
+  final Audit audit;
+  const EvaluationScreen({super.key, required this.audit});
 
-// --- App Container ---
+  @override
+  State<EvaluationScreen> createState() => _EvaluationScreenState();
+}
 
-export default function App() {
-  const [currentView, setCurrentView] = useState(VIEW.HOME);
-  const [selectedAudit, setSelectedAudit] = useState(null);
+class _EvaluationScreenState extends State<EvaluationScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  
+  // Example Items - In a real app, these would come from an API
+  final List<EvaluationItem> _items = [
+    EvaluationItem(id: '1.1', criteria: 'Standard Operating Procedures', checkPoint: 'Operator followed SOP Rev 4.2 during visual inspection cycle.', maxScore: 4),
+    EvaluationItem(id: '1.2', criteria: 'Safety Protocol Compliance', checkPoint: 'Correct PPE (Goggles, Steel toes) worn throughout the process.', maxScore: 4),
+    EvaluationItem(id: '2.1', criteria: 'Machine Maintenance Logs', checkPoint: 'Check if daily log is signed before shift start.', maxScore: 4),
+  ];
 
-  const handleAuditSelect = (audit) => {
-    setSelectedAudit(audit);
-    setCurrentView(VIEW.EVALUATION);
-  };
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
-  const getHeaderTitle = () => {
-    switch (currentView) {
-      case VIEW.HOME: return 'Audit Manager';
-      case VIEW.ACCEPTANCE: return 'Approve Plans';
-      case VIEW.REQUEST: return 'Audit Log';
-      case VIEW.EVALUATION: return `Audit #${selectedAudit?.id.split('-')[1]}`;
-      default: return 'Portal';
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: Text('Evaluation: ${widget.audit.id}'),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFF2563EB),
+          labelColor: const Color(0xFF2563EB),
+          unselectedLabelColor: const Color(0xFF64748B),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          tabs: const [Tab(text: 'CHECKLIST'), Tab(text: 'HISTORY')],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildList(),
+          const Center(child: Text('Audit Trail & History')),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomAction(),
+    );
+  }
+
+  Widget _buildBottomAction() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Audit Submitted Successfully')));
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: const Text('Complete Audit', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _items.length,
+      itemBuilder: (context, index) {
+        final item = _items[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Opacity(
+            opacity: item.applicable ? 1.0 : 0.6,
+            child: Column(
+              children: [
+                _EvaluationCardHeader(item: item, onToggle: (v) => setState(() => item.applicable = v)),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.checkPoint, style: const TextStyle(fontSize: 14, color: Color(0xFF475569), height: 1.5)),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _InputWrapper(
+                              label: 'RATING',
+                              child: DropdownButtonFormField<int>(
+                                value: item.score,
+                                decoration: _fieldDecoration(),
+                                items: [0, 1, 2, 3, 4].map((i) => DropdownMenuItem(value: i, child: Text('$i / 4'))).toList(),
+                                onChanged: item.applicable ? (v) => setState(() => item.score = v) : null,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _InputWrapper(
+                              label: 'MEASURED',
+                              child: TextField(
+                                enabled: item.applicable,
+                                decoration: _fieldDecoration(hint: 'Enter value'),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _InputWrapper(
+                        label: 'OBSERVATIONS',
+                        child: TextField(
+                          enabled: item.applicable,
+                          maxLines: 2,
+                          decoration: _fieldDecoration(
+                            hint: 'Note any non-compliance here...',
+                            suffix: const Icon(Icons.mic_none, size: 20, color: Color(0xFF2563EB)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Row(
+                        children: [
+                          Icon(Icons.attachment_outlined, size: 16, color: Color(0xFF94A3B8)),
+                          SizedBox(width: 4),
+                          Text('Add Evidence (Photos/Docs)', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                        ],
+                      )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  InputDecoration _fieldDecoration({String? hint, Widget? suffix}) {
+    return InputDecoration(
+      isDense: true,
+      hintText: hint,
+      suffixIcon: suffix,
+      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1)),
+    );
+  }
+}
+
+// --- ATOMIC UI PIECES ---
+
+class _EvaluationCardHeader extends StatelessWidget {
+  final EvaluationItem item;
+  final ValueChanged<bool> onToggle;
+  const _EvaluationCardHeader({required this.item, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(6)),
+            child: Text(item.id, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(item.criteria, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)))),
+          Transform.scale(
+            scale: 0.8,
+            child: Switch.adaptive(
+              value: item.applicable, 
+              onChanged: onToggle,
+              activeColor: const Color(0xFF2563EB),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _InputWrapper extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _InputWrapper({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 0.5)),
+        const SizedBox(height: 8),
+        child,
+      ],
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color bg = const Color(0xFFF1F5F9);
+    Color text = const Color(0xFF475569);
+
+    if (status == 'Pending Approval') {
+      bg = const Color(0xFFFFF7ED);
+      text = const Color(0xFFC2410C);
+    } else if (status == 'Scheduled') {
+      bg = const Color(0xFFEFF6FF);
+      text = const Color(0xFF1D4ED8);
+    } else if (status == 'Requested') {
+      bg = const Color(0xFFF0FDF4);
+      text = const Color(0xFF15803D);
     }
-  };
 
-  const handleBack = () => {
-    if (currentView === VIEW.EVALUATION) {
-      setCurrentView(selectedAudit.status === 'Pending Approval' ? VIEW.ACCEPTANCE : VIEW.REQUEST);
-    } else {
-      setCurrentView(VIEW.HOME);
-    }
-  };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+      child: Text(status, style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.w800)),
+    );
+  }
+}
 
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-24 selection:bg-blue-100 antialiased">
-      <Header 
-        title={getHeaderTitle()} 
-        onBack={currentView !== VIEW.HOME ? handleBack : null} 
-        currentView={currentView}
-      />
-      
-      <main className="max-w-xl mx-auto">
-        {currentView === VIEW.HOME && (
-          <HomeScreen setView={setCurrentView} />
-        )}
+class _IconText extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _IconText({required this.icon, required this.text});
 
-        {(currentView === VIEW.ACCEPTANCE || currentView === VIEW.REQUEST) && (
-          <AuditListing 
-            type={currentView} 
-            onAuditSelect={handleAuditSelect}
-          />
-        )}
-
-        {currentView === VIEW.EVALUATION && (
-          <EvaluationSheet 
-            audit={selectedAudit} 
-          />
-        )}
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-1 flex items-center justify-around z-40 safe-area-bottom">
-        <NavItem 
-          icon={Home} 
-          label="Home" 
-          active={currentView === VIEW.HOME} 
-          onClick={() => setCurrentView(VIEW.HOME)}
-        />
-        <NavItem 
-          icon={ClipboardCheck} 
-          label="Review" 
-          active={currentView === VIEW.ACCEPTANCE} 
-          onClick={() => setCurrentView(VIEW.ACCEPTANCE)}
-        />
-        <NavItem 
-          icon={FilePlus} 
-          label="Log" 
-          active={currentView === VIEW.REQUEST} 
-          onClick={() => setCurrentView(VIEW.REQUEST)}
-        />
-        <NavItem 
-          icon={Settings} 
-          label="Settings" 
-          active={false}
-          onClick={() => {}}
-        />
-      </nav>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 12px); }
-        ::-webkit-scrollbar { display: none; }
-        * { -webkit-tap-highlight-color: transparent; }
-      `}} />
-    </div>
-  );
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFF94A3B8)),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
 }
