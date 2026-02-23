@@ -1,1 +1,400 @@
-test
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const AuditApp());
+}
+
+class AuditApp extends StatelessWidget {
+  const AuditApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Audit Management System',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E88E5)),
+        useMaterial3: true,
+        cardTheme: const CardTheme(elevation: 2),
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+// --- HOME PAGE ---
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Audit Dashboard'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: Container(
+        color: Colors.grey[100],
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildHomeCard(
+                  context,
+                  title: 'Audit Plan Acceptance',
+                  icon: Icons.assignment_turned_in_outlined,
+                  color: Colors.orange.shade700,
+                  onTap: () {
+                    // Placeholder for future implementation
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Audit Plan Acceptance coming soon')),
+                    );
+                  },
+                ),
+                const SizedBox(width: 40),
+                _buildHomeCard(
+                  context,
+                  title: 'Audit Request',
+                  icon: Icons.list_alt_rounded,
+                  color: Colors.blue.shade700,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AuditRequestListScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeCard(BuildContext context,
+      {required String title, required IconData icon, required Color color, required VoidCallback onTap}) {
+    return SizedBox(
+      width: 300,
+      height: 250,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 80, color: color),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- AUDIT REQUEST LIST SCREEN ---
+
+class AuditRequestListScreen extends StatelessWidget {
+  const AuditRequestListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Mock data for requests
+    final List<Map<String, String>> requests = [
+      {'id': 'AUD-2024-00019', 'template': 'ISO 9001:2015', 'status': 'Pending', 'date': '2024-05-20'},
+      {'id': 'AUD-2024-00020', 'template': 'Safety Audit', 'status': 'In Progress', 'date': '2024-05-21'},
+      {'id': 'AUD-2024-00021', 'template': 'Quality Control', 'status': 'Verified', 'date': '2024-05-22'},
+    ];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Audit Requests')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3, // Tablet optimization
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.5,
+          ),
+          itemCount: requests.length,
+          itemBuilder: (context, index) {
+            final audit = requests[index];
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AuditEvaluationScreen(auditId: audit['id']!)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(audit['id']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
+                          _statusChip(audit['status']!),
+                        ],
+                      ),
+                      const Spacer(),
+                      const Text('Template Name:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(audit['template']!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(audit['date']!, style: const TextStyle(color: Colors.grey)),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String status) {
+    Color color = Colors.orange;
+    if (status == 'Verified') color = Colors.green;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: color)),
+      child: Text(status, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+// --- AUDIT EVALUATION SCREEN (The Tablet Form) ---
+
+class AuditEvaluationScreen extends StatefulWidget {
+  final String auditId;
+  const AuditEvaluationScreen({super.key, required this.auditId});
+
+  @override
+  State<AuditEvaluationScreen> createState() => _AuditEvaluationScreenState();
+}
+
+class _AuditEvaluationScreenState extends State<AuditEvaluationScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text('Audit Evaluation: ${widget.auditId}'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.save),
+              label: const Text('Submit'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade700,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+          // Top Summary Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.grey[50],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _headerItem('Audit Number', widget.auditId),
+                _headerItem('Template', 'Quality Standard v1'),
+                _headerItem('Bottleneck', 'Molding Line 2'),
+                _headerItem('Status', 'Verification Pending'),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Tab Selection
+          Container(
+            padding: const EdgeInsets.only(left: 16),
+            child: Row(
+              children: [
+                _tabItem('Audit Check Sheet', true),
+                _tabItem('Audit Findings', false),
+              ],
+            ),
+          ),
+          // Main Form Header (Table Headers)
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Man', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Section'),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildEvaluationTable(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _headerItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _tabItem(String title, bool active) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: active ? Colors.blue : Colors.transparent, width: 3)),
+      ),
+      child: Text(title, style: TextStyle(color: active ? Colors.blue : Colors.grey, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildEvaluationTable() {
+    return Container(
+      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+      child: Column(
+        children: [
+          // Header Row
+          Container(
+            color: Colors.grey[100],
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            child: const Row(
+              children: [
+                Expanded(flex: 1, child: Text('S.No', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 2, child: Text('Criteria', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 3, child: Text('Checkpoint / Specification', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 2, child: Text('Score', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 3, child: Text('Observation', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 2, child: Text('Evidence', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 1, child: Text('App', style: TextStyle(fontWeight: FontWeight.bold))),
+              ],
+            ),
+          ),
+          // Data Rows
+          _evaluationRow('1.1', 'Operator Skill', 'Skill Level of Operator', '4'),
+          _evaluationRow('2.1', 'Training', 'Training Needs vs Records', '4'),
+          _evaluationRow('3.1', 'Awareness', 'Customer Issues Understanding', '3'),
+          _evaluationRow('4.1', 'Standard', 'Control Plan Compliance', '5'),
+        ],
+      ),
+    );
+  }
+
+  Widget _evaluationRow(String sno, String criteria, String checkpoint, String maxScore) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade200))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 1, child: Text(sno)),
+          Expanded(flex: 2, child: Text(criteria, style: const TextStyle(fontWeight: FontWeight.w500))),
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(checkpoint),
+                const SizedBox(height: 8),
+                Container(
+                  height: 35,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(color: Colors.grey[50], border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(4)),
+                  child: const Center(child: Text('Select Specification...', style: TextStyle(fontSize: 12, color: Colors.grey))),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
+                    hint: const Text('Score', style: TextStyle(fontSize: 12)),
+                    items: ['1', '2', '3', '4', '5'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    onChanged: (v) {},
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Max: $maxScore', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: TextField(
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Enter observation...',
+                hintStyle: const TextStyle(fontSize: 12),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(icon: const Icon(Icons.camera_alt_outlined, color: Colors.blue, size: 20), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.attach_file, color: Colors.green, size: 20), onPressed: () {}),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Switch(value: true, onChanged: (v) {}, activeColor: Colors.green),
+          ),
+        ],
+      ),
+    );
+  }
+}
